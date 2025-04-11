@@ -4,12 +4,13 @@ import random
 import networkx as nx
 from itertools import permutations
 from geopy.distance import geodesic
-from sklearn.cluster import KMeans
+from sklearn.cluster import KMeans, DBSCAN
 import folium
 from config import endereco_partida, endereco_partida_coords
 import math
 import pandas as pd
 import logging
+import numpy as np
 
 def obter_coordenadas_opencage(endereco):
     """
@@ -205,7 +206,7 @@ def otimizar_aproveitamento_frota(pedidos_df, caminhoes_df, percentual_frota, ma
     caminhoes_df = caminhoes_df[caminhoes_df['Disponível'] == 'Ativo']
     
     # Agrupa os pedidos em regiões
-    pedidos_df = agrupar_por_regiao(pedidos_df, n_clusters)
+    pedidos_df = agrupar_por_regiao(pedidos_df, n_clusters=n_clusters)
     
     for regiao in pedidos_df['Regiao'].unique():
         pedidos_regiao = pedidos_df[pedidos_df['Regiao'] == regiao]
@@ -229,17 +230,51 @@ def otimizar_aproveitamento_frota(pedidos_df, caminhoes_df, percentual_frota, ma
     
     return pedidos_df
 
-def agrupar_por_regiao(pedidos_df, n_clusters):
+def agrupar_por_regiao(pedidos_df, metodo='kmeans', n_clusters=3, eps=0.01, min_samples=2):
     """
-    Agrupa os pedidos em regiões usando K-Means com base nas colunas de Latitude e Longitude.
-    Adiciona/atualiza a coluna "Regiao" no DataFrame.
+    Agrupa os pedidos em regiões utilizando o nome da cidade e, dentro de cada cidade,
+    aplica K-Means ou DBSCAN com base em Latitude e Longitude.
+
+    Args:
+        pedidos_df (pd.DataFrame): DataFrame contendo os pedidos com colunas 'Cidade de Entrega', 'Latitude' e 'Longitude'.
+        metodo (str): Método de agrupamento ('kmeans' ou 'dbscan').
+        n_clusters (int): Número de clusters (apenas para K-Means).
+        eps (float): Distância máxima entre pontos para formar um cluster (apenas para DBSCAN).
+        min_samples (int): Número mínimo de pontos para formar um cluster (apenas para DBSCAN).
+
+    Returns:
+        pd.DataFrame: DataFrame com a coluna 'Regiao' indicando o cluster de cada pedido.
     """
     if pedidos_df.empty:
-        pedidos_df['Regiao'] = []
-        return pedidos_df
-    coords = pedidos_df[['Latitude', 'Longitude']].values
-    kmeans = KMeans(n_clusters=n_clusters, random_state=42)
-    pedidos_df['Regiao'] = kmeans.fit_predict(coords)
+        raise ValueError("O DataFrame de pedidos está vazio.")
+
+    required_columns = ['Cidade de Entrega', 'Latitude', 'Longitude']
+    if not all(col in pedidos_df.columns for col in required_columns):
+        raise ValueError(f"As colunas necessárias {required_columns} não foram encontradas no DataFrame.")
+
+    pedidos_df['Regiao'] = -1  # Inicializa a coluna de regiões
+    regiao_id = 0
+
+    # Agrupa os pedidos por cidade
+    for cidade, grupo_cidade in pedidos_df.groupby('Cidade de Entrega'):
+        coords = grupo_cidade[['Latitude', 'Longitude']].values
+
+        if metodo == 'kmeans':
+            # Agrupamento com K-Means
+            kmeans = KMeans(n_clusters=min(n_clusters, len(grupo_cidade)), random_state=42)
+            clusters = kmeans.fit_predict(coords)
+        elif metodo == 'dbscan':
+            # Agrupamento com DBSCAN
+            dbscan = DBSCAN(eps=eps, min_samples=min_samples, metric='haversine')
+            clusters = dbscan.fit_predict(np.radians(coords))
+            clusters = np.where(clusters == -1, np.nan, clusters)  # Marcar como NaN pontos não agrupados
+        else:
+            raise ValueError("Método de agrupamento inválido. Escolha 'kmeans' ou 'dbscan'.")
+
+        # Atualiza o DataFrame com os clusters
+        pedidos_df.loc[grupo_cidade.index, 'Regiao'] = clusters + regiao_id
+        regiao_id += len(np.unique(clusters))  # Incrementa o ID da região para evitar sobreposição
+
     return pedidos_df
 
 def criar_mapa(pedidos_df):

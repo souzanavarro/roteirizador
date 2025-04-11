@@ -1,0 +1,6 @@
+[theme]
+primaryColor = "#00FFFF"  # Ciano neon
+backgroundColor = "#0D1117"  # Fundo preto azulado
+secondaryBackgroundColor = "#161B22"  # Fundo secundário escuro
+textColor = "#C9D1D9"  # Texto cinza claro
+font = "monospace"  # Fonte futurista
