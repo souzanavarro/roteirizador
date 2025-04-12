@@ -154,7 +154,7 @@ def resolver_vrp(pedidos_df, caminhoes_df):
     N = len(coords)
     distance_matrix = [[calcular_dist(i, j) for j in range(N)] for i in range(N)]
 
-    num_vehicles = len(caminhoes_df)
+    num_vehicles = len(pedidos_df)
     if num_vehicles < 1:
         return "Nenhum caminhão disponível para a roteirização."
 
