@@ -154,7 +154,7 @@ def resolver_vrp(pedidos_df, caminhoes_df):
     N = len(coords)
     distance_matrix = [[calcular_dist(i, j) for j in range(N)] for i in range(N)]
 
-    num_vehicles = len(pedidos_df)
+    num_vehicles = len(caminhoes_df)
     if num_vehicles < 1:
         return "Nenhum caminhão disponível para a roteirização."
 
@@ -174,7 +174,9 @@ def resolver_vrp(pedidos_df, caminhoes_df):
     search_parameters = pywrapcp.DefaultRoutingSearchParameters()
     search_parameters.first_solution_strategy = (routing_enums_pb2.FirstSolutionStrategy.PATH_CHEAPEST_ARC)
 
-    {}
+   )
+    if solution:
+        routes = {}
         for vehicle_id in range(num_vehicles):
             index = routing.Start(vehicle_id)
             route = []
