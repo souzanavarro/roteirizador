@@ -172,11 +172,9 @@ def resolver_vrp(pedidos_df, caminhoes_df):
 
     # Parâmetros de busca
     search_parameters = pywrapcp.DefaultRoutingSearchParameters()
-   _pb2.FirstSolutionStrategy.PATH_CHEAPEST_ARC)
+    search_parameters.first_solution_strategy = (routing_enums_pb2.FirstSolutionStrategy.PATH_CHEAPEST_ARC)
 
-    solution = routing.SolveWithParameters(search_parameters)
-    if solution:
-        routes = {}
+    {}
         for vehicle_id in range(num_vehicles):
             index = routing.Start(vehicle_id)
             route = []
@@ -205,7 +203,7 @@ def otimizar_aproveitamento_frota(pedidos_df, caminhoes_df, percentual_frota, ma
     # Filtra somente caminhões com disponibilidade "Ativo"
     caminhoes_df = caminhoes_df[caminhoes_df['Disponível'] == 'Ativo']
     
-        # Agrupa os pedidos em regiões
+    # Agrupa os pedidos em regiões
     pedidos_df = agrupar_por_regiao(pedidos_df, n_clusters=n_clusters)
     
     for regiao in pedidos_df['Regiao'].unique():
